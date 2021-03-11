@@ -41,13 +41,13 @@ X_test = test_data[['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10']
 Y_solution = X_test.mean(axis=1)  # we know y = mean(x_i)
 Y_predictions = model.predict(X_test)
 print(Y_predictions)
-rms_error = metrics.mean_squared_error(Y_predictions, Y_solution)**0.5
+rms_error = metrics.mean_squared_error(Y_predictions, Y_solution) ** 0.5
 print("RMS Error: ", rms_error)
-
+aSDIOEQdh
 #
 # Save solution
 #
 sol = pd.concat([test_data['Id'], pd.DataFrame(Y_predictions)], axis=1)
 sol.columns = ['Id', 'y']  # rename columns
-print(sol)
-sol.to_csv('data/sample_template.csv')
+# print(sol)
+# sol.to_csv('data/sample_template.csv')
