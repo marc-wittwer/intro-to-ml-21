@@ -1,19 +1,13 @@
 import pandas as pd
 import numpy as np
-from scipy import stats
 from sklearn import linear_model
 from sklearn import metrics
-from sklearn.model_selection import KFold
-import matplotlib.pyplot as plt
 import math
 
 #
 # read data (as a pd.DataFrame)
 #
 train_data = pd.read_csv('data/train.csv')
-train_data[train_data.columns[2:]].plot()
-plt.show()
-
 
 x = train_data[train_data.columns[2:]]
 lin_features = x
@@ -26,32 +20,29 @@ cos_features = x.applymap(math.cos)
 cos_features = cos_features.rename(columns=lambda name: str(name) + "_cos")
 const_features = pd.DataFrame(1, index=np.arange(len(x)), columns=['const'])
 features = pd.concat([lin_features, quad_features, exp_features, cos_features, const_features], axis=1)
-print(features)
 
 #
 # Fit model
 #
-kfold = KFold(n_splits=10, shuffle=True, random_state=42)
-alphas = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10.0, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+alphas = np.arange(1.6, 1.8, 0.001)
 model = linear_model.RidgeCV(alphas=alphas, cv=None,
-                             fit_intercept=False, scoring=None,
+                             fit_intercept=True, scoring=None,
                              normalize=True, store_cv_values=True)
 
 X = features[features.columns]
 Y = train_data['y']
 model.fit(X, Y)
-weights = model.get_params()
-print(weights)
-print(model.coef_)
-print(model.intercept_)
+print("Weights: ", model.coef_)
+print("Intercept: ", model.intercept_)
 cv_val = model.cv_values_
 cv_mean = np.mean(cv_val, axis=0)
-plt.plot(alphas, cv_mean)
-plt.show()
+# plt.plot(alphas, cv_mean)
+# plt.show()
+print("Alpha: ", model.alpha_)
 
 Y_predict = model.predict(X)
 score = metrics.mean_squared_error(Y_predict, Y)**0.5
-print(score)
+print("Training Score: ", score)
 
-sol = pd.DataFrame(model.coef_)
-sol.to_csv('data/solution.csv', index=False, header=False)
+sol = pd.DataFrame(np.append(model.coef_[0:-1], model.intercept_))
+sol.to_csv('data/solution_ridge.csv', index=False, header=False)
