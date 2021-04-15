@@ -10,7 +10,8 @@ from sklearn.model_selection import KFold, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 from sklearn import svm
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, r2_score
+from sklearn.multioutput import MultiOutputRegressor
 
 #
 # read data (as a pd.DataFrame)
@@ -94,12 +95,21 @@ for i, test in enumerate(medical_tests):
 
 
 # Train classifier to predict sepsis event
+print("start svm fitting for sepsis prediction")
 X = train_features_flat
 y = train_labels['LABEL_Sepsis']
 clf = svm.SVC(kernel='rbf', cache_size=1000)
 clf.fit(X, y)
 print("\nSepsis prediction\n average accuracy: " + str(clf.score(X, y)) +
       "\n roc_auc score: " + str(roc_auc_score(y, clf.decision_function(X))))
+
+# Train regressor to predict mean value of vital signs
+print("start svr fitting for vital signs")
+X = train_features_flat
+y = train_labels[['LABEL_RRate']] #, 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']]
+reg = MultiOutputRegressor(svm.SVR(kernel='rbf'))  # lots of parameters that could be set here
+reg.fit(X, y)
+print("\nVital signs prediction\n R2 score: " + str(r2_score(reg.predict(X), y)))
 
 # # Evaluate strategies
 # results = list()
