@@ -23,7 +23,7 @@ test_features = pd.read_csv('data/test_features.csv')
 
 # Split train data into test data for internal scoring (0.7 means 70% training data/30% test data)
 # Problem: The split happens sequentially and not randomly, eg. last rows are always testing data
-train_test_split_ratio = 0.7
+train_test_split_ratio = 0.05
 
 max_samples = train_labels.shape[0]
 split_data_row_index = math.floor(train_test_split_ratio * max_samples)
