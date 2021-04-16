@@ -1,0 +1,129 @@
+Performance test on data imputation types
+
+Two tests were performed to compare different data imputation methods.
+
+The 'SVC' and the 'Linear SVC' was tested.
+
+1)
+SVC
+
+9497 samples will be used as training data.
+
+Type: mean
+mean LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.727, 0.503]
+LABEL_Fibrinogen   [0.926, 0.481]
+LABEL_AST   [0.757, 0.503]
+LABEL_Alkalinephos   [0.761, 0.503]
+LABEL_Bilirubin_total   [0.756, 0.503]
+LABEL_Lactate   [0.797, 0.498]
+LABEL_TroponinI   [0.898, 0.498]
+LABEL_SaO2   [0.762, 0.513]
+LABEL_Bilirubin_direct   [0.965, 0.492]
+LABEL_EtCO2   [0.935, 0.510]
+type: mean  -Mean auc score:  0.5005 score 0.8284
+
+Type: zero
+zero LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.727, 0.510]
+LABEL_Fibrinogen   [0.926, 0.491]
+LABEL_AST   [0.757, 0.498]
+LABEL_Alkalinephos   [0.761, 0.499]
+LABEL_Bilirubin_total   [0.756, 0.497]
+LABEL_Lactate   [0.797, 0.487]
+LABEL_TroponinI   [0.898, 0.492]
+LABEL_SaO2   [0.762, 0.501]
+LABEL_Bilirubin_direct   [0.965, 0.489]
+LABEL_EtCO2   [0.935, 0.491]
+type: zero  -Mean auc score:  0.4955 score 0.8284
+
+Type: median
+median LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.727, 0.506]
+LABEL_Fibrinogen   [0.926, 0.492]
+LABEL_AST   [0.757, 0.500]
+LABEL_Alkalinephos   [0.761, 0.507]
+LABEL_Bilirubin_total   [0.756, 0.503]
+LABEL_Lactate   [0.797, 0.508]
+LABEL_TroponinI   [0.898, 0.502]
+LABEL_SaO2   [0.762, 0.503]
+LABEL_Bilirubin_direct   [0.965, 0.510]
+LABEL_EtCO2   [0.935, 0.508]
+type: median  -Mean auc score:  0.5040 score 0.8284
+
+Type: most-frequent
+most-frequent LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.727, 0.487]
+LABEL_Fibrinogen   [0.926, 0.495]
+LABEL_AST   [0.757, 0.505]
+LABEL_Alkalinephos   [0.761, 0.503]
+LABEL_Bilirubin_total   [0.756, 0.502]
+LABEL_Lactate   [0.797, 0.499]
+LABEL_TroponinI   [0.898, 0.486]
+LABEL_SaO2   [0.762, 0.493]
+LABEL_Bilirubin_direct   [0.965, 0.535]
+LABEL_EtCO2   [0.935, 0.489]
+type: most-frequent  -Mean auc score:  0.4993 score 0.8284
+
+
+2)
+LINEAR SVC
+
+3799 samples will be used as training data.
+
+Type: mean
+mean LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.691, 0.501]
+LABEL_Fibrinogen   [0.918, 0.509]
+LABEL_AST   [0.726, 0.509]
+LABEL_Alkalinephos   [0.723, 0.508]
+LABEL_Bilirubin_total   [0.740, 0.504]
+LABEL_Lactate   [0.787, 0.499]
+LABEL_TroponinI   [0.889, 0.501]
+LABEL_SaO2   [0.744, 0.499]
+LABEL_Bilirubin_direct   [0.959, 0.477]
+LABEL_EtCO2   [0.929, 0.483]
+type: mean  -Mean auc score:  0.4991 score 0.8107
+
+Type: zero
+zero LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.699, 0.502]
+LABEL_Fibrinogen   [0.917, 0.501]
+LABEL_AST   [0.736, 0.507]
+LABEL_Alkalinephos   [0.740, 0.506]
+LABEL_Bilirubin_total   [0.734, 0.506]
+LABEL_Lactate   [0.781, 0.505]
+LABEL_TroponinI   [0.888, 0.492]
+LABEL_SaO2   [0.744, 0.499]
+LABEL_Bilirubin_direct   [0.949, 0.473]
+LABEL_EtCO2   [0.924, 0.477]
+type: zero  -Mean auc score:  0.4968 score 0.8114
+
+Type: median
+median LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.701, 0.503]
+LABEL_Fibrinogen   [0.920, 0.513]
+LABEL_AST   [0.734, 0.505]
+LABEL_Alkalinephos   [0.738, 0.505]
+LABEL_Bilirubin_total   [0.736, 0.503]
+LABEL_Lactate   [0.781, 0.500]
+LABEL_TroponinI   [0.890, 0.504]
+LABEL_SaO2   [0.750, 0.496]
+LABEL_Bilirubin_direct   [0.964, 0.479]
+LABEL_EtCO2   [0.927, 0.475]
+type: median  -Mean auc score:  0.4982 score 0.8140
+
+Type: most-frequent
+most-frequent LABEL    [score, auc_score]
+LABEL_BaseExcess   [0.715, 0.504]
+LABEL_Fibrinogen   [0.919, 0.514]
+LABEL_AST   [0.609, 0.501]
+LABEL_Alkalinephos   [0.611, 0.503]
+LABEL_Bilirubin_total   [0.651, 0.500]
+LABEL_Lactate   [0.774, 0.507]
+LABEL_TroponinI   [0.880, 0.505]
+LABEL_SaO2   [0.728, 0.502]
+LABEL_Bilirubin_direct   [0.962, 0.480]
+LABEL_EtCO2   [0.922, 0.483]
+type: most-frequent  -Mean auc score:  0.4998 score 0.7770
+
