@@ -40,6 +40,16 @@ medical_tests = ['LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
                  'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
                  'LABEL_EtCO2']
 
+mean_std = True    # If to use mean and std per patient instead of flattening the timeseries (Might be good to extend by trend (slope of linear fit))
+if mean_std:
+    train_X_features = train_X.groupby(['pid']).mean()
+    train_X_features = train_X_features.join(train_X.groupby(['pid']).std(), rsuffix='_std')
+    train_X = train_X_features.reset_index()
+
+    test_X_features = test_X.groupby(['pid']).mean()
+    test_X_features = test_X_features.join(test_X.groupby(['pid']).std(), rsuffix='_std')
+    test_X = test_X_features.reset_index()
+
 # Missing Features / Imputation of NaN values
 
 # TODO: Idea: Use mean per patient
@@ -101,7 +111,7 @@ test_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in test_X_flat.c
 
 # Task 1: Medical tests
 #  - SVC parameters to tune systematically
-#       kernel functions, C value, decision_function_shape
+#       kernel functions, C value (regularization), decision_function_shape
 #       class weight = can handle unbalanced classification data,
 #       (random_state (seed))
 
@@ -114,7 +124,7 @@ for medical_test in medical_tests:
     print("start SVM fitting for " + medical_test)
     y = train_y[medical_test]
     y_test = test_y[medical_test]
-    clf = svm.SVC(kernel='rbf', cache_size=5000)
+    clf = svm.SVC(kernel='rbf', cache_size=5000, class_weight='balanced')
     clf.probability = True
     clf.fit(X, y)
     # probabilities = clf.predict_proba(X)  # values between [0,1]
@@ -135,7 +145,7 @@ print("start svm fitting for sepsis prediction")
 X = train_X_flat
 y = train_y['LABEL_Sepsis']
 y_test = test_y['LABEL_Sepsis']
-clf = svm.SVC(kernel='linear', cache_size=1000)
+clf = svm.SVC(kernel='rbf', cache_size=1000, class_weight='balanced')
 clf.fit(X, y)
 print("\nSepsis prediction\n average accuracy: " + str(clf.score(test_X_flat, y_test)) +
       "\n roc_auc score: " + str(roc_auc_score(y_test, clf.decision_function(test_X_flat))))
