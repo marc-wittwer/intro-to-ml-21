@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn.metrics import roc_auc_score, r2_score
 from sklearn.multioutput import MultiOutputRegressor
+from sklearn import preprocessing
 import math
 
 #
@@ -40,6 +41,26 @@ medical_tests = ['LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
                  'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
                  'LABEL_EtCO2']
 
+# Preprocessing of Data
+
+# normalization
+cols_to_norm = ['EtCO2', 'PTT', 'BUN', 'Lactate', 'Temp', 'Hgb',
+       'HCO3', 'BaseExcess', 'RRate', 'Fibrinogen', 'Phosphate', 'WBC',
+       'Creatinine', 'PaCO2', 'AST', 'FiO2', 'Platelets', 'SaO2', 'Glucose',
+       'ABPm', 'Magnesium', 'Potassium', 'ABPd', 'Calcium', 'Alkalinephos',
+       'SpO2', 'Bilirubin_direct', 'Chloride', 'Hct', 'Heartrate',
+       'Bilirubin_total', 'TroponinI', 'ABPs', 'pH']
+for col in cols_to_norm:
+    train_X = train_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_X[col]).reshape(-1, 1)))
+    test_X = test_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_X[col]).reshape(-1, 1)))
+
+cols_to_norm_y = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
+for col in cols_to_norm_y:
+    train_y = train_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_y[col]).reshape(-1, 1)))
+    test_y = test_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_y[col]).reshape(-1, 1)))
+
+# Missing Features / Imputation of NaN values
+
 mean_std = True    # If to use mean and std per patient instead of flattening the timeseries (Might be good to extend by trend (slope of linear fit))
 if mean_std:
     train_X_features = train_X.groupby(['pid']).mean()
@@ -50,7 +71,6 @@ if mean_std:
     test_X_features = test_X_features.join(test_X.groupby(['pid']).std(), rsuffix='_std')
     test_X = test_X_features.reset_index()
 
-# Missing Features / Imputation of NaN values
 
 # TODO: Idea: Use mean per patient
 # TODO: Idea: Use mean per age group
@@ -102,12 +122,17 @@ print("Finished imputing NaN values")
 
 # Reshape patient data to single row
 train_X_flat = train_X_imputed.set_index('pid').groupby(level=0).apply(
-    lambda df: df.reset_index(drop=True)).unstack().sort_index(axis=1, level=1)
+    lambda df: df.reset_index(drop=True)).unstack()
 train_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in train_X_flat.columns]
 
 test_X_flat = test_X_imputed.set_index('pid').groupby(level=0).apply(
-    lambda df: df.reset_index(drop=True)).unstack().sort_index(axis=1, level=1)
+    lambda df: df.reset_index(drop=True)).unstack()
 test_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in test_X_flat.columns]
+
+# set pid as index, not used  for prediction, since probably rather random
+if train_X_flat.index.name != 'pid':
+    train_X_flat.set_index('pid')
+    test_X_flat.set_index('pid')
 
 # Task 1: Medical tests
 #  - SVC parameters to tune systematically
@@ -148,7 +173,7 @@ y_test = test_y['LABEL_Sepsis']
 clf = svm.SVC(kernel='rbf', cache_size=1000, class_weight='balanced')
 clf.fit(X, y)
 print("\nSepsis prediction\n average accuracy: " + str(clf.score(test_X_flat, y_test)) +
-      "\n roc_auc score: " + str(roc_auc_score(y_test, clf.decision_function(test_X_flat))))
+      "\n roc_auc score: " + str(roc_auc_score(y_test, np.sign(clf.decision_function(test_X_flat)))))
 
 # Task 3: Train regressor to predict mean value of vital signs
 print("\nstart linear fitting for vital signs")
