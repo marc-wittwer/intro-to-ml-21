@@ -8,11 +8,18 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold, RepeatedStratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from sklearn import svm
 from sklearn.metrics import roc_auc_score, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn import preprocessing
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score, recall_score
+from sklearn.metrics import f1_score, roc_auc_score, roc_curve
+
+
+
 import math
 
 #
@@ -44,20 +51,52 @@ medical_tests = ['LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
 # Preprocessing of Data
 
 # normalization
-cols_to_norm = ['EtCO2', 'PTT', 'BUN', 'Lactate', 'Temp', 'Hgb',
+# Comment marc: This code did not change the data ???
+# cols_to_norm = ['EtCO2', 'PTT', 'BUN', 'Lactate', 'Temp', 'Hgb',
+#        'HCO3', 'BaseExcess', 'RRate', 'Fibrinogen', 'Phosphate', 'WBC',
+#        'Creatinine', 'PaCO2', 'AST', 'FiO2', 'Platelets', 'SaO2', 'Glucose',
+#        'ABPm', 'Magnesium', 'Potassium', 'ABPd', 'Calcium', 'Alkalinephos',
+#        'SpO2', 'Bilirubin_direct', 'Chloride', 'Hct', 'Heartrate',
+#        'Bilirubin_total', 'TroponinI', 'ABPs', 'pH']
+# for col in cols_to_norm:
+#     train_X = train_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_X[col]).reshape(-1, 1)))
+#     test_X = test_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_X[col]).reshape(-1, 1)))
+#
+# cols_to_norm_y = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
+# for col in cols_to_norm_y:
+#     train_y = train_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_y[col]).reshape(-1, 1)))
+#     test_y = test_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_y[col]).reshape(-1, 1)))
+
+
+# Normalization
+cols_to_norm_X = ['Time', 'Age', 'EtCO2', 'PTT', 'BUN', 'Lactate', 'Temp', 'Hgb',
        'HCO3', 'BaseExcess', 'RRate', 'Fibrinogen', 'Phosphate', 'WBC',
        'Creatinine', 'PaCO2', 'AST', 'FiO2', 'Platelets', 'SaO2', 'Glucose',
        'ABPm', 'Magnesium', 'Potassium', 'ABPd', 'Calcium', 'Alkalinephos',
        'SpO2', 'Bilirubin_direct', 'Chloride', 'Hct', 'Heartrate',
        'Bilirubin_total', 'TroponinI', 'ABPs', 'pH']
-for col in cols_to_norm:
-    train_X = train_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_X[col]).reshape(-1, 1)))
-    test_X = test_X.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_X[col]).reshape(-1, 1)))
+
+scaled_train_X = pd.DataFrame(StandardScaler().fit_transform(train_X[cols_to_norm_X].values), index=train_X.index, columns=cols_to_norm_X)
+pid_column_train_X = pd.DataFrame(data=train_X['pid'], columns=["pid"])
+train_X = pd.concat([pid_column_train_X, scaled_train_X], axis=1)
+
+scaled_test_X = pd.DataFrame(StandardScaler().fit_transform(test_X[cols_to_norm_X].values), index=test_X.index, columns=cols_to_norm_X)
+pid_column_test_X = pd.DataFrame(data=test_X['pid'], columns=["pid"])
+test_X = pd.concat([pid_column_test_X, scaled_test_X], axis=1)
 
 cols_to_norm_y = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
-for col in cols_to_norm_y:
-    train_y = train_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(train_y[col]).reshape(-1, 1)))
-    test_y = test_y.assign(col=preprocessing.StandardScaler().fit_transform(np.array(test_y[col]).reshape(-1, 1)))
+unscaled_column_names = ['pid', 'LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
+       'LABEL_Alkalinephos', 'LABEL_Bilirubin_total', 'LABEL_Lactate',
+       'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
+       'LABEL_EtCO2', 'LABEL_Sepsis']
+scaled_train_y = pd.DataFrame(StandardScaler().fit_transform(train_y[cols_to_norm_y].values), index=train_y.index, columns=cols_to_norm_y)
+unscaled_column_train_y = pd.DataFrame(data=train_y[unscaled_column_names], columns=unscaled_column_names)
+train_y = pd.concat([unscaled_column_train_y, scaled_train_y], axis=1)
+
+scaled_test_y = pd.DataFrame(StandardScaler().fit_transform(test_y[cols_to_norm_y].values), index=test_y.index, columns=cols_to_norm_y)
+unscaled_column_test_y = pd.DataFrame(data=test_y[unscaled_column_names], columns=unscaled_column_names)
+test_y = pd.concat([unscaled_column_test_y, scaled_test_y], axis=1)
+
 
 # Missing Features / Imputation of NaN values
 
@@ -134,6 +173,24 @@ if train_X_flat.index.name != 'pid':
     train_X_flat.set_index('pid')
     test_X_flat.set_index('pid')
 
+
+def generate_model_report(y_actual, y_predicted):
+    print("Accuracy = " , accuracy_score(y_actual, y_predicted))
+    print("Precision = " ,precision_score(y_actual, y_predicted))
+    print("Recall = " ,recall_score(y_actual, y_predicted))
+    print("F1 Score = " ,f1_score(y_actual, y_predicted))
+    pass
+
+def generate_auc_roc_curve(clf, X_test, Y_test):
+    y_pred_proba = clf.predict_proba(X_test)[:, 1]
+    fpr, tpr, thresholds = roc_curve(Y_test,  y_pred_proba)
+    auc = roc_auc_score(Y_test, y_pred_proba)
+    plt.plot(fpr,tpr,label="AUC ROC Curve with Area Under the curve ="+str(auc))
+    plt.legend(loc=4)
+    plt.show()
+    pass
+
+
 # Task 1: Medical tests
 #  - SVC parameters to tune systematically
 #       kernel functions, C value (regularization), decision_function_shape
@@ -149,10 +206,21 @@ for medical_test in medical_tests:
     print("start SVM fitting for " + medical_test)
     y = train_y[medical_test]
     y_test = test_y[medical_test]
+
+    print('Number of 1s and 0s in label data:\n', y.value_counts())
+
     clf = svm.SVC(kernel='rbf', cache_size=5000, class_weight='balanced')
+
     clf.probability = True
     clf.fit(X, y)
     # probabilities = clf.predict_proba(X)  # values between [0,1]
+
+    y_test_predicted = clf.predict(test_X_flat)
+    # Log true/false positives
+    print(pd.crosstab(pd.Series(y_test_predicted, name='Predicted'), pd.Series(y_test, name='Actual')))
+
+    generate_model_report(y_test, y_test_predicted)
+    # generate_auc_roc_curve(clf, test_X_flat, y_test)
 
     score = clf.score(test_X_flat, y_test)
     auc_score = roc_auc_score(y_test, clf.decision_function(test_X_flat))
@@ -164,6 +232,7 @@ for i, test in enumerate(medical_tests):
 
 task1_score = np.mean(np.array(medical_test_scores)[:, 1])
 print("Mean auc score: ", task1_score)
+
 
 # Task 2: Train classifier to predict sepsis event
 print("start svm fitting for sepsis prediction")
