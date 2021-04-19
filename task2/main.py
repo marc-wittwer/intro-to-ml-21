@@ -19,7 +19,6 @@ from sklearn.metrics import precision_score, recall_score
 from sklearn.metrics import f1_score, roc_auc_score, roc_curve
 
 
-
 import math
 
 #
@@ -31,7 +30,7 @@ test_features = pd.read_csv('data/test_features.csv')
 
 # Split train data into test data for internal scoring (0.7 means 70% training data/30% test data)
 # Problem: The split happens sequentially and not randomly, eg. last rows are always testing data
-train_test_split_ratio = 0.05
+train_test_split_ratio = 0.8
 
 max_samples = train_labels.shape[0]
 split_data_row_index = math.floor(train_test_split_ratio * max_samples)
@@ -42,11 +41,6 @@ train_y = train_labels[0:split_data_row_index]
 
 test_X = train_features[(split_data_row_index + 1) * 12:max_samples * 12]
 test_y = train_labels[split_data_row_index + 1:max_samples]
-
-medical_tests = ['LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
-                 'LABEL_Alkalinephos', 'LABEL_Bilirubin_total', 'LABEL_Lactate',
-                 'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
-                 'LABEL_EtCO2']
 
 # Preprocessing of Data
 
@@ -84,23 +78,29 @@ scaled_test_X = pd.DataFrame(StandardScaler().fit_transform(test_X[cols_to_norm_
 pid_column_test_X = pd.DataFrame(data=test_X['pid'], columns=["pid"])
 test_X = pd.concat([pid_column_test_X, scaled_test_X], axis=1)
 
-cols_to_norm_y = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
-unscaled_column_names = ['pid', 'LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
-       'LABEL_Alkalinephos', 'LABEL_Bilirubin_total', 'LABEL_Lactate',
-       'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
-       'LABEL_EtCO2', 'LABEL_Sepsis']
-scaled_train_y = pd.DataFrame(StandardScaler().fit_transform(train_y[cols_to_norm_y].values), index=train_y.index, columns=cols_to_norm_y)
-unscaled_column_train_y = pd.DataFrame(data=train_y[unscaled_column_names], columns=unscaled_column_names)
-train_y = pd.concat([unscaled_column_train_y, scaled_train_y], axis=1)
+scaled_test_features = pd.DataFrame(StandardScaler().fit_transform(test_features[cols_to_norm_X].values),
+                                    index=test_features.index, columns=cols_to_norm_X)
+pid_column_test_features = pd.DataFrame(data=test_features['pid'], columns=["pid"])
+test_features = pd.concat([pid_column_test_features, scaled_test_features], axis=1)
 
-scaled_test_y = pd.DataFrame(StandardScaler().fit_transform(test_y[cols_to_norm_y].values), index=test_y.index, columns=cols_to_norm_y)
-unscaled_column_test_y = pd.DataFrame(data=test_y[unscaled_column_names], columns=unscaled_column_names)
-test_y = pd.concat([unscaled_column_test_y, scaled_test_y], axis=1)
+# cols_to_norm_y = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
+# unscaled_column_names = ['pid', 'LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
+#        'LABEL_Alkalinephos', 'LABEL_Bilirubin_total', 'LABEL_Lactate',
+#        'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
+#        'LABEL_EtCO2', 'LABEL_Sepsis']
+# scaled_train_y = pd.DataFrame(StandardScaler().fit_transform(train_y[cols_to_norm_y].values), index=train_y.index, columns=cols_to_norm_y)
+# unscaled_column_train_y = pd.DataFrame(data=train_y[unscaled_column_names], columns=unscaled_column_names)
+# train_y = pd.concat([unscaled_column_train_y, scaled_train_y], axis=1)
+#
+# scaled_test_y = pd.DataFrame(StandardScaler().fit_transform(test_y[cols_to_norm_y].values), index=test_y.index, columns=cols_to_norm_y)
+# unscaled_column_test_y = pd.DataFrame(data=test_y[unscaled_column_names], columns=unscaled_column_names)
+# test_y = pd.concat([unscaled_column_test_y, scaled_test_y], axis=1)
 
 
 # Missing Features / Imputation of NaN values
 
 replace_timeseries_by_mean_std_per_patient = False    # If to use mean and std per patient instead of flattening the timeseries (Might be good to extend by trend (slope of linear fit))
+# ToDo: implement this for the test_featuers dataset if we want to use this strategy
 if replace_timeseries_by_mean_std_per_patient:
     train_X_features = train_X.groupby(['pid']).mean()
     train_X_features = train_X_features.join(train_X.groupby(['pid']).std(), rsuffix='_std')
@@ -127,21 +127,25 @@ if selected_imputation_strategy == 'mean':
     imputeMean = SimpleImputer(missing_values=np.nan, strategy='mean')
     train_X_imputed = pd.DataFrame(imputeMean.fit_transform(train_X), columns=train_X.columns)
     test_X_imputed = pd.DataFrame(imputeMean.fit_transform(test_X), columns=test_X.columns)
+    test_features_imputed = pd.DataFrame(imputeMean.fit_transform(test_features), columns=test_features.columns)
 
 elif selected_imputation_strategy == 'zero':
     imputeZero = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0)
     train_X_imputed = pd.DataFrame(imputeZero.fit_transform(train_X), columns=train_X.columns)
     test_X_imputed = pd.DataFrame(imputeZero.fit_transform(test_X), columns=test_X.columns)
+    test_features_imputed = pd.DataFrame(imputeZero.fit_transform(test_features), columns=test_features.columns)
 
 elif selected_imputation_strategy == 'median':
     imputeMedian = SimpleImputer(missing_values=np.nan, strategy='median')
     train_X_imputed = pd.DataFrame(imputeMedian.fit_transform(train_X), columns=train_X.columns)
     test_X_imputed = pd.DataFrame(imputeMedian.fit_transform(test_X), columns=test_X.columns)
+    test_features_imputed = pd.DataFrame(imputeMedian.fit_transform(test_features), columns=test_features.columns)
 
 elif selected_imputation_strategy == 'most-frequent':
     imputeMostFrequent = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
     train_X_imputed = pd.DataFrame(imputeMostFrequent.fit_transform(train_X), columns=train_X.columns)
     test_X_imputed = pd.DataFrame(imputeMostFrequent.fit_transform(test_X), columns=test_X.columns)
+    test_features_imputed = pd.DataFrame(imputeMostFrequent.fit_transform(test_features), columns=test_features.columns)
 else:
     print('Imputation strategy is not selected.')
 
@@ -154,24 +158,27 @@ print("Finished imputing NaN values")
 # Fix imbalanced classification data
 # TODO: Add balancing logic
 
+
 # Reshape patient data to single row
-train_X_flat = train_X_imputed.set_index('pid').groupby(level=0).apply(
-    lambda df: df.reset_index(drop=True)).unstack()
-train_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in train_X_flat.columns]
+def reshape_patient_data(x_original):
+    x_reshaped = x_original.set_index('pid').groupby(level=0).apply(
+        lambda df: df.reset_index(drop=True)).unstack()
+    x_reshaped.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in x_reshaped.columns]
 
-test_X_flat = test_X_imputed.set_index('pid').groupby(level=0).apply(
-    lambda df: df.reset_index(drop=True)).unstack()
-test_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in test_X_flat.columns]
+    # Drop Age/Time duplicates columns
+    if not replace_timeseries_by_mean_std_per_patient:
+        drop_time_columns = True
+        time_column_names = ['Time1','Time2','Time3','Time4','Time5','Time6','Time7','Time8','Time9','Time10','Time11','Time12']
+        age_column_names = ['Age2','Age3','Age4','Age5','Age6','Age7','Age8','Age9','Age10','Age11','Age12']
+        columns_to_drop = time_column_names + age_column_names if drop_time_columns else age_column_names
+        x_reshaped = x_reshaped.drop(columns_to_drop, axis=1)
+        print(x_reshaped.head())
+    return x_reshaped
 
-# Drop Age/Time duplicates columns
-if not replace_timeseries_by_mean_std_per_patient:
-    drop_time_columns = True
-    time_column_names = ['Time1','Time2','Time3','Time4','Time5','Time6','Time7','Time8','Time9','Time10','Time11','Time12']
-    age_column_names = ['Age2','Age3','Age4','Age5','Age6','Age7','Age8','Age9','Age10','Age11','Age12']
-    columns_to_drop = time_column_names + age_column_names if drop_time_columns else age_column_names
-    train_X_flat = train_X_flat.drop(columns_to_drop, axis = 1)
-    test_X_flat = test_X_flat.drop(columns_to_drop, axis = 1)
-    print(train_X_flat.head())
+
+train_X_flat = reshape_patient_data(train_X_imputed)
+test_X_flat = reshape_patient_data(test_X_imputed)
+test_features_flat = reshape_patient_data(test_features_imputed)
 
 
 # set pid as index, not used  for prediction, since probably rather random
@@ -181,17 +188,18 @@ if train_X_flat.index.name != 'pid':
 
 
 def generate_model_report(y_actual, y_predicted):
-    print("Accuracy = " , accuracy_score(y_actual, y_predicted))
-    print("Precision = " ,precision_score(y_actual, y_predicted))
-    print("Recall = " ,recall_score(y_actual, y_predicted))
-    print("F1 Score = " ,f1_score(y_actual, y_predicted))
+    print("Accuracy = ", accuracy_score(y_actual, y_predicted))
+    print("Precision = ", precision_score(y_actual, y_predicted))
+    print("Recall = ", recall_score(y_actual, y_predicted))
+    print("F1 Score = ", f1_score(y_actual, y_predicted))
     pass
 
-def generate_auc_roc_curve(clf, X_test, Y_test):
-    y_pred_proba = clf.predict_proba(X_test)[:, 1]
-    fpr, tpr, thresholds = roc_curve(Y_test,  y_pred_proba)
-    auc = roc_auc_score(Y_test, y_pred_proba)
-    plt.plot(fpr,tpr,label="AUC ROC Curve with Area Under the curve ="+str(auc))
+
+def generate_auc_roc_curve(clsf, x_test, y_test):
+    y_pred_proba = clsf.predict_proba(x_test)[:, 1]
+    fpr, tpr, thresholds = roc_curve(y_test,  y_pred_proba)
+    auc = roc_auc_score(y_test, y_pred_proba)
+    plt.plot(fpr, tpr, label="AUC ROC Curve with Area Under the curve ="+str(auc))
     plt.legend(loc=4)
     plt.show()
     pass
@@ -204,9 +212,15 @@ def generate_auc_roc_curve(clf, X_test, Y_test):
 #       (random_state (seed))
 
 
+y_predict = []  # store prediction results on test set for hand-in in this variable
+
 # Train classifiers to predict ordered medical tests
 X = train_X_flat
 medical_test_scores = []
+medical_tests = ['LABEL_BaseExcess', 'LABEL_Fibrinogen', 'LABEL_AST',
+                 'LABEL_Alkalinephos', 'LABEL_Bilirubin_total', 'LABEL_Lactate',
+                 'LABEL_TroponinI', 'LABEL_SaO2', 'LABEL_Bilirubin_direct',
+                 'LABEL_EtCO2']
 
 for medical_test in medical_tests:
     print("start SVM fitting for " + medical_test)
@@ -232,6 +246,9 @@ for medical_test in medical_tests:
     auc_score = roc_auc_score(y_test, clf.decision_function(test_X_flat))
     medical_test_scores.append([score, auc_score])
 
+    # predict results for hand-in test dataset
+    y_predict.append(clf.predict(test_features_flat))
+
 for i, test in enumerate(medical_tests):
     print("\n" + test + "\n average accuracy: " + str(medical_test_scores[i][0]) +
           "\n roc_auc score: " + str(medical_test_scores[i][1]))
@@ -250,14 +267,23 @@ clf.fit(X, y)
 print("\nSepsis prediction\n average accuracy: " + str(clf.score(test_X_flat, y_test)) +
       "\n roc_auc score: " + str(roc_auc_score(y_test, np.sign(clf.decision_function(test_X_flat)))))
 
+# predict results for hand-in test dataset
+y_predict.append(clf.predict(test_features_flat))
+
+
 # Task 3: Train regressor to predict mean value of vital signs
+vital_signs = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
 print("\nstart linear fitting for vital signs")
 X = train_X_flat
-y = train_y[['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']]
-y_test = test_y[['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']]
+y = train_y[vital_signs]
+y_test = test_y[vital_signs]
 reg = MultiOutputRegressor(linear_model.LinearRegression())  # lots of parameters that could be set here
 reg.fit(X, y)
 print("\nVital signs prediction\n R2 score: " + str(r2_score(reg.predict(test_X_flat), y_test)))
+
+# predict results for hand-in test dataset
+y_predict.append(reg.predict(test_features_flat))
+
 
 # # Evaluate strategies
 # results = list()
@@ -280,8 +306,7 @@ print("\nVital signs prediction\n R2 score: " + str(r2_score(reg.predict(test_X_
 
 task1_score = np.mean(np.array(medical_test_scores)[:, 1])
 task2_score = roc_auc_score(test_y['LABEL_Sepsis'], clf.decision_function(test_X_flat))
-task3_score = np.mean([0.5 + 0.5 * np.maximum(0, r2_score(reg.predict(test_X_flat), test_y[
-    ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']]))])
+task3_score = np.mean([0.5 + 0.5 * np.maximum(0, r2_score(reg.predict(test_X_flat), test_y[vital_signs]))])
 
 total_score = np.mean([task1_score, task2_score, task3_score])
 
@@ -289,3 +314,13 @@ print("\nScores:\n\nTask 1: " + str(task1_score) + "\nTask 2: " + str(task2_scor
     task3_score) + "\n\nTotal Score: " + str(total_score))
 print("\nBaseline: " + str(0.713853457215))
 
+
+# Generate an output file
+print("storing result")
+sol = np.stack([y_predict[i] for i in range(len(y_predict)-1)], axis=-1)
+sol = pd.DataFrame(np.concatenate([sol, y_predict[-1]], axis=1))
+test_features_pid = pd.DataFrame(np.array([test_features['pid'].iloc[i] for i in range(len(test_features)) if i % 12 == 0]))
+sol = pd.concat([test_features_pid, sol], axis=1)
+sol.columns = ['pid'] + medical_tests + ['LABEL_Sepsis'] + vital_signs
+sol.to_csv('data/prediction.csv', index=False, float_format='%.3f')
+print("done")
