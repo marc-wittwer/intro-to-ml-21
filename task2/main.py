@@ -100,8 +100,8 @@ test_y = pd.concat([unscaled_column_test_y, scaled_test_y], axis=1)
 
 # Missing Features / Imputation of NaN values
 
-mean_std = True    # If to use mean and std per patient instead of flattening the timeseries (Might be good to extend by trend (slope of linear fit))
-if mean_std:
+replace_timeseries_by_mean_std_per_patient = False    # If to use mean and std per patient instead of flattening the timeseries (Might be good to extend by trend (slope of linear fit))
+if replace_timeseries_by_mean_std_per_patient:
     train_X_features = train_X.groupby(['pid']).mean()
     train_X_features = train_X_features.join(train_X.groupby(['pid']).std(), rsuffix='_std')
     train_X = train_X_features.reset_index()
@@ -119,7 +119,7 @@ if mean_std:
 # 'median'        = median of column
 # 'most-frequent' = smallest most frequent value
 
-selected_imputation_strategy = 'mean'
+selected_imputation_strategy = 'zero'
 
 print("Start imputing NaN values")
 
@@ -151,13 +151,8 @@ print("Finished imputing NaN values")
 # imputeMean = SimpleImputer(missing_values=np.nan, strategy='mean', add_indicator=add_indicator)
 # train_X_imputed = pd.DataFrame(imputeMean.fit_transform(train_X), columns=train_X.columns.append('imputed_' + train_X.columns[train_X.isna().sum() > 0]))
 
-
-# TODO: Filter out age/time columns
-
-
 # Fix imbalanced classification data
 # TODO: Add balancing logic
-
 
 # Reshape patient data to single row
 train_X_flat = train_X_imputed.set_index('pid').groupby(level=0).apply(
@@ -167,6 +162,17 @@ train_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in train_X_flat
 test_X_flat = test_X_imputed.set_index('pid').groupby(level=0).apply(
     lambda df: df.reset_index(drop=True)).unstack()
 test_X_flat.columns = ['{}{}'.format(x[0], int(x[1]) + 1) for x in test_X_flat.columns]
+
+# Drop Age/Time duplicates columns
+if not replace_timeseries_by_mean_std_per_patient:
+    drop_time_columns = True
+    time_column_names = ['Time1','Time2','Time3','Time4','Time5','Time6','Time7','Time8','Time9','Time10','Time11','Time12']
+    age_column_names = ['Age2','Age3','Age4','Age5','Age6','Age7','Age8','Age9','Age10','Age11','Age12']
+    columns_to_drop = time_column_names + age_column_names if drop_time_columns else age_column_names
+    train_X_flat = train_X_flat.drop(columns_to_drop, axis = 1)
+    test_X_flat = test_X_flat.drop(columns_to_drop, axis = 1)
+    print(train_X_flat.head())
+
 
 # set pid as index, not used  for prediction, since probably rather random
 if train_X_flat.index.name != 'pid':
