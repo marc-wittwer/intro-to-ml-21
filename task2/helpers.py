@@ -1,7 +1,26 @@
-# Test second approach here
-
 import pandas as pd
 import numpy as np
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score, recall_score
+from sklearn.metrics import f1_score, roc_auc_score, roc_curve, r2_score
+
+
+def generate_model_report(y_actual, y_predicted):
+    print("Accuracy = ", accuracy_score(y_actual, y_predicted))
+    print("Precision = ", precision_score(y_actual, y_predicted))
+    print("Recall = ", recall_score(y_actual, y_predicted))
+    print("F1 Score = ", f1_score(y_actual, y_predicted))
+    pass
+
+
+def generate_auc_roc_curve(clsf, x_test, y_test):
+    y_pred_proba = clsf.predict_proba(x_test)[:, 1]
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    auc = roc_auc_score(y_test, y_pred_proba)
+    plt.plot(fpr, tpr, label="AUC ROC Curve with Area Under the curve =" + str(auc))
+    plt.legend(loc=4)
+    plt.show()
+    pass
 
 
 def inspect_nan_statistics_per_feature(data):

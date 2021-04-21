@@ -1,13 +1,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score, recall_score
-from sklearn.metrics import f1_score, roc_auc_score, roc_curve, r2_score
+from sklearn.metrics import roc_auc_score, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn import linear_model
 from sklearn import svm
 from sklearn.model_selection import train_test_split
+
+from helpers import generate_model_report, generate_auc_roc_curve  # if that import doesnt work make sure to set "task2" as a source folder in "project structure" settings
 
 train_features = pd.read_csv('data/train_features_interpolated.csv')
 train_labels = pd.read_csv('data/train_labels.csv')
@@ -22,24 +22,6 @@ n_jobs = 3
 
 test_size = 0.9
 train_X, test_X, train_y, test_y = train_test_split(train_features, train_labels, test_size=test_size, random_state=42)
-
-
-def generate_model_report(y_actual, y_predicted):
-    print("Accuracy = ", accuracy_score(y_actual, y_predicted))
-    print("Precision = ", precision_score(y_actual, y_predicted))
-    print("Recall = ", recall_score(y_actual, y_predicted))
-    print("F1 Score = ", f1_score(y_actual, y_predicted))
-    pass
-
-
-def generate_auc_roc_curve(clsf, x_test, y_test):
-    y_pred_proba = clsf.predict_proba(x_test)[:, 1]
-    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
-    auc = roc_auc_score(y_test, y_pred_proba)
-    plt.plot(fpr, tpr, label="AUC ROC Curve with Area Under the curve =" + str(auc))
-    plt.legend(loc=4)
-    plt.show()
-    pass
 
 
 # Train classifiers to predict ordered medical tests
