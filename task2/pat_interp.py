@@ -30,7 +30,7 @@ def interpolate_per_patient(features):
 
 def drop_columns(features, drop_time_columns):
     # Drop Age/Time duplicates columns
-    time_column_names = ['Time1', 'Time2', 'Time3', 'Time4', 'Time5', 'Time6', 'Time7', 'Time8', 'Time9', 'Time10',
+    time_column_names = ['Time2', 'Time3', 'Time4', 'Time5', 'Time6', 'Time7', 'Time8', 'Time9', 'Time10',
                          'Time11', 'Time12']
     age_column_names = ['Age2', 'Age3', 'Age4', 'Age5', 'Age6', 'Age7', 'Age8', 'Age9', 'Age10', 'Age11', 'Age12']
     columns_to_drop = time_column_names + age_column_names if drop_time_columns else age_column_names
@@ -61,6 +61,6 @@ if __name__ == "__main__":
     test_features_interpolated = interpolate_per_patient(test_features)
     test_features = drop_columns(test_features_interpolated, True)
 
-    train_features.to_csv('data/train_features_interpolated.csv', index=False)
-    test_features.to_csv('data/test_features_interpolated.csv', index=False)
+    train_features.to_csv('data/train_features_interpolated.csv', index=True)
+    test_features.to_csv('data/test_features_interpolated.csv', index=True)
     print("interpolated datasets have been generated.")
