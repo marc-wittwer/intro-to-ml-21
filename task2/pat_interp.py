@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score, roc_auc_score, roc_curve, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn import linear_model
 from sklearn import svm
-
+from sklearn.model_selection import train_test_split
 
 
 #
@@ -69,22 +69,8 @@ train_features = drop_columns(features_interpolated, True)
 #
 # Split into train and test split
 #
-
-train_test_split_ratio = 0.1
-
-max_samples = train_labels.shape[0]
-split_data_row_index = math.floor(train_test_split_ratio * max_samples)
-print()
-print(split_data_row_index, 'samples will be used as training data.')
-
-train_X = train_features[0:split_data_row_index]
-train_y = train_labels[0:split_data_row_index]
-
-test_X = train_features[(split_data_row_index + 1):max_samples]
-test_y = train_labels[split_data_row_index + 1:max_samples]
-
-
-
+test_size = 0.9
+train_X, test_X, train_y, test_y = train_test_split(train_features, train_labels, test_size=test_size, random_state=42)
 
 def generate_model_report(y_actual, y_predicted):
     print("Accuracy = ", accuracy_score(y_actual, y_predicted))
