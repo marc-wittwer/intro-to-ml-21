@@ -10,7 +10,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression, f_regression
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, Lasso
 
 n_jobs = 3  # number of CPU cores to use
 np.random.seed(42)  # global random seed to get reproducible results
@@ -18,9 +18,6 @@ np.random.seed(42)  # global random seed to get reproducible results
 train_features = pd.read_csv('data/train_extracted_features.csv', index_col='pid')
 train_labels = pd.read_csv('data/train_extracted_labels.csv', index_col='pid')
 test_features = pd.read_csv('data/test_extracted_features.csv')
-
-#train_features = train_features[0:5*12]
-#train_labels = train_labels[0:5*12]
 
 
 # Subtask 1
@@ -52,16 +49,21 @@ for test_label in medical_tests:
 
 # Subtask 3
 vital_signs = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
-grid_search_params_3 = {'reg__alpha': [70]}  # name is important
+grid_search_params_3 = {'reg__alpha': [0.1, 1, 10, 100, 1000, 10000]}
+results = []
 for sign in vital_signs:
+    print("fitting " + sign)
     pipeline_3 = Pipeline(steps=[('imputer', SimpleImputer(strategy='mean')),
                                  ('scaler', StandardScaler()),
-                                 ('sel', SelectKBest(f_regression, k=100)),
-                                 ('reg', Ridge())])
+                                 #('sel', SelectKBest(f_regression, k=100)),
+                                 ('reg', Lasso())])
 
     model = GridSearchCV(pipeline_3, param_grid=grid_search_params_3, scoring='r2', n_jobs=n_jobs, verbose=3, cv=None)
     model.fit(train_features, train_labels[sign])
-    print("\n\n ----->RESULTS: " + str(sign))
-    results_df = pd.DataFrame({'param': model.cv_results_["params"], 'mean_score': model.cv_results_["mean_test_score"],
-                               'fit_time': model.cv_results_["mean_fit_time"]})
-    print(results_df)
+    results.append(pd.DataFrame({'param': model.cv_results_["params"],
+                                 'mean_score': model.cv_results_["mean_test_score"],
+                                 'fit_time': model.cv_results_["mean_fit_time"]}))
+
+for i, result in enumerate(results):
+    print("\n --- " + vital_signs[i] + " ---")
+    print(result)
