@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score, recall_score
 from sklearn.metrics import f1_score, roc_auc_score, roc_curve, r2_score
+import matplotlib.pyplot as plt
 
 
 def generate_model_report(y_actual, y_predicted):
