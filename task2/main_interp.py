@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import roc_auc_score, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn import linear_model
@@ -15,16 +15,23 @@ use_features = True
 
 if use_features:
     train_features = pd.read_csv('data/train_extracted_features.csv')
-    train_labels = pd.read_csv('data/train_labels.csv')
+    train_labels = pd.read_csv('data/train_extracted_labels.csv')
     test_features = pd.read_csv('data/test_extracted_features.csv')
 else:
     train_features = pd.read_csv('data/train_features_interpolated.csv')
-    train_labels = pd.read_csv('data/train_labels.csv')
+    train_labels = pd.read_csv('data/train_labels_interpolated.csv')
     test_features = pd.read_csv('data/test_features_interpolated.csv')
 
 train_features = train_features.set_index('pid')
 train_labels = train_labels.set_index('pid')
 test_features = test_features.set_index('pid')
+
+train_idxs = train_features.index
+test_idxs = test_features.index
+
+imputeZero = SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0)
+train_features = pd.DataFrame(imputeZero.fit_transform(train_features), columns=train_features.columns, index=train_idxs)
+test_features = pd.DataFrame(imputeZero.fit_transform(test_features), columns=test_features.columns, index=test_idxs)
 
 n_jobs = 7
 
@@ -34,7 +41,7 @@ n_jobs = 7
 
 
 test_size = 0.9
-train_X, test_X, train_y, test_y = train_test_split(train_features, train_labels, test_size=test_size, random_state=42)
+train_X, test_X, train_y, test_y = train_test_split(train_features, train_labels, test_size=test_size, shuffle=False, random_state=42)
 
 # Train classifiers to predict ordered medical tests
 X = train_X
@@ -52,7 +59,6 @@ for medical_test in medical_tests:
     print('Number of 1s and 0s in label data:\n', y.value_counts())
 
     clf = svm.SVC(kernel='rbf', cache_size=5000, class_weight='balanced')
-
     clf.probability = True
     clf.fit(X, y)
     # probabilities = clf.predict_proba(X)  # values between [0,1]
