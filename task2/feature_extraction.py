@@ -1,7 +1,4 @@
 import pandas as pd
-import math
-import matplotlib.pyplot as plt
-import numpy as np
 from multiprocessing import Pool
 from functools import partial
 
@@ -79,6 +76,7 @@ if __name__ == "__main__":
     #
 
     train_features = pd.read_csv('data/train_features.csv')
+    train_labels = pd.read_csv('data/train_labels.csv', index_col='pid')
     test_features = pd.read_csv('data/test_features.csv')
 
     # how many cores to use, adapt to availability
@@ -106,10 +104,16 @@ if __name__ == "__main__":
     train_features = drop_columns(features_interpolated, drop_time, use_features)
     test_features = drop_columns(test_features_interpolated, drop_time, use_features)
 
+    train_features.sort_index(axis=0, ascending=True, inplace=True)
+    train_labels.sort_index(axis=0, ascending=True, inplace=True)
+    test_features.sort_index(axis=0, ascending=True, inplace=True)
+
     if use_features:
         train_features.to_csv('data/train_extracted_features.csv', index=True)
+        train_labels.to_csv('data/train_extracted_labels.csv', index=True)
         test_features.to_csv('data/test_extracted_features.csv', index=True)
     else:
         train_features.to_csv('data/train_features_interpolated.csv', index=True)
+        train_labels.to_csv('data/train_labels_interpolated.csv', index=True)
         test_features.to_csv('data/test_features_interpolated.csv', index=True)
     print("interpolated datasets have been generated.")
