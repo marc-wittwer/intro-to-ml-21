@@ -8,7 +8,7 @@ from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from sklearn.linear_model import Lasso
 import time
 
-n_jobs = 3  # number of CPU cores to use
+n_jobs = 12  # number of CPU cores to use
 np.random.seed(42)  # global random seed to get reproducible results
 
 train_features = pd.read_csv('data/train_extracted_features.csv', index_col='pid')
@@ -52,7 +52,7 @@ for i, test_label in enumerate(medical_tests):
 
 # Subtask 3
 vital_signs = ['LABEL_RRate', 'LABEL_ABPm', 'LABEL_SpO2', 'LABEL_Heartrate']
-lambdas_reg = [1, 1.2, 0.1, 0.11]
+lambdas_reg = [0.32, 1.2, 0.1, 0.11]
 
 for i, sign in enumerate(vital_signs):
     print("\nFitting " + sign + " ...")
@@ -73,6 +73,7 @@ sol = pd.DataFrame(np.stack([test_predictions[i] for i in range(len(test_predict
 sol.columns = medical_tests + vital_signs
 sol.to_csv('data/prediction.csv', index=True, float_format='%.3f')
 print("Done!")
+
 
 
 
