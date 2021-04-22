@@ -15,8 +15,6 @@ train_features = pd.read_csv('data/train_extracted_features.csv', index_col='pid
 train_labels = pd.read_csv('data/train_extracted_labels.csv', index_col='pid')
 test_features = pd.read_csv('data/test_extracted_features.csv', index_col='pid')
 
-train_features = train_features[0:12*10]
-train_labels = train_labels[0:12*10]
 
 test_predictions = []  # predictions on test set will be stored here
 
