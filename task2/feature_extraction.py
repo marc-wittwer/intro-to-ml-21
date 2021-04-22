@@ -80,7 +80,7 @@ if __name__ == "__main__":
     test_features = pd.read_csv('data/test_features.csv')
 
     # how many cores to use, adapt to availability
-    n_jobs = 7
+    n_jobs = 3
 
     # use features (mean, std implemented) instead of concatenating
     use_features = True
