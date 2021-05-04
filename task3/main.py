@@ -3,12 +3,8 @@ import pandas as pd
 #
 # read data (as a pd.DataFrame)
 #
-train_data = pd.read_csv('data/train.csv')
-test_data = pd.read_csv('data/test.csv')
+train_features = pd.read_csv('data/train_encoded_features.csv')
+train_labels = pd.read_csv('data/train_labels.csv')
 
-# Split to have sequence and active (label) separated
-train_sequence = train_data['Sequence']
-train_active = train_data['Active']
-
-test_sequence = test_data['Sequence']
+test_features = pd.read_csv('data/test_encoded_features.csv')
 
