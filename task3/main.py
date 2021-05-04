@@ -37,10 +37,11 @@ grid_search_params = [
                 'clf__max_depth': [None]
                 }},
 
-    {'clf': HistGradientBoostingClassifier(max_iter=1000),
-     'params': {'clf__l2_regularization': [0.4, 0.5, 0.6],
-                'clf__max_leaf_nodes': [50, 100, 150],
+    {'clf': HistGradientBoostingClassifier(max_iter=1000, random_state=42),
+     'params': {'clf__l2_regularization': [0.6, 0.7],
+                'clf__max_leaf_nodes': [100, 150, 200],
                 'clf__min_samples_leaf': [1, 2, 5],
+                'clf__learning_rate': [0.1, 0.2],
                 'clf__categorical_features': [[0, 1, 2, 3]]}}
 
     ]  # name is important
