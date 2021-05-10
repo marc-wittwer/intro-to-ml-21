@@ -8,7 +8,7 @@
 
 The code in `feature_encoding.py` separates the train labels from the
 train features. The train and test features (four-letter strings describing 
-the mutations) are split into separate rows and encoded using integer encoding. 
+the mutations) are split into separate columns and encoded using integer encoding. 
 The resulting data is stored in the files `train_encoded_features.csv`,
 `train_labels.csv` and `test_encoded_features.csv`.
 
