@@ -5,6 +5,12 @@ from torchvision import datasets, models, transforms
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+import multiprocessing
+
+np.random.seed(42)
+torch.manual_seed(42)
+
 
 # Data augmentation and normalization for training
 # Just normalization for validation
@@ -33,17 +39,27 @@ class_name = image_dataset.classes
 
 extraction_net = models.resnet101(pretrained=True)
 
-feature_df = pd.DataFrame()
 
-for i in range(dataset_size*0+1000):
+def processImage(tuple):
+    i, data = tuple
     print(i)
-    image, classes = next(iter(dataloader))
-    out = extraction_net(image)
-    feature_df = feature_df.append(pd.DataFrame(out.data.numpy(), index=[f'{i:05}']))
+    out = extraction_net(data[0])
+    features_dict[i] = out.data.numpy()[0]
 
 
-feature_df.to_csv('data/image_features.csv', index=True, header=False)
+features_dict = multiprocessing.Manager().dict()
 
+with multiprocessing.Pool(multiprocessing.cpu_count() - 1) as P:
+    P.map(processImage, enumerate(dataloader), chunksize=1)
+    P.close()
+    P.join()
+
+final_features = []
+for i in range(len(features_dict)):
+    final_features.append(features_dict[i])
+
+df = pd.DataFrame(final_features)
+df.to_csv('data/train_image_features.csv', index=True, header=False)
 
 
 # To display the image
