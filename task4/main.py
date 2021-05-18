@@ -13,9 +13,10 @@ def build_features_and_labels(img_features, train_trp, test_trp):
     n_features = img_features.shape[1]  # number of features per image
     train_x = np.zeros((2*n_train, 3*n_features))
     train_y = np.zeros(2*n_train)
-    test_x = np.zeros((2*n_test, 3*n_features))
+    test_x = np.zeros((n_test, 3*n_features))
 
     # compose train features and labels
+    print("composing train set...")
     idx = 0
     for triplet in train_trp.to_numpy():
         # a: anchor, b: positive, c: negative
@@ -40,6 +41,7 @@ def build_features_and_labels(img_features, train_trp, test_trp):
         idx += 1
 
     # compose test features
+    print("composing test set...")
     idx = 0
     for triplet in test_trp.to_numpy():
         # a: anchor, b: positive, c: negative
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     np.random.seed(42)
 
     # load features
-    image_features = pd.read_csv("data/image_features.csv", header=None, index_col=0)
+    image_features = pd.read_csv("data/train_image_features_resnet101_val.csv", header=None, index_col=0)
     train_triplets = pd.read_csv("data/train_triplets.txt", sep=" ", header=None)
     test_triplets = pd.read_csv("data/test_triplets.txt", sep=" ", header=None)
 
@@ -122,20 +124,23 @@ if __name__ == "__main__":
     train_triplets.info()
 
     # remove triplets containing features that have not been extracted yet
-    train_triplets = train_triplets[train_triplets.max(axis=1) < len(image_features)]
-    test_triplets = test_triplets[test_triplets.max(axis=1) < len(image_features)]
-    print("remaining number of triplets: ")
-    print("train:", len(train_triplets))
-    print("test:", len(test_triplets))
+    # train_triplets = train_triplets[train_triplets.max(axis=1) < len(image_features)]
+    # test_triplets = test_triplets[test_triplets.max(axis=1) < len(image_features)]
+    # print("remaining number of triplets: ")
+    # print("train:", len(train_triplets))
+    # print("test:", len(test_triplets))
 
     # create train + test triplets (concatenate features) + labels
     train_features_np, train_labels_np, test_features_np = build_features_and_labels(image_features, train_triplets, test_triplets)
+    print("train features shape", train_features_np.shape)
+    print("train labels shape", train_labels_np.shape)
+    print("test features shape", test_features_np.shape)
 
     # train classifier
     clf = train_classifier(train_features_np, train_labels_np)
 
-    # # predict on test set
-    # y_test_predictions = pd.DataFrame(clf.predict(test_features_np))
-    #
-    # # #  Save predictions to file
-    # y_test_predictions.to_csv('data/predictions.csv', index=False, header=False)
+    # predict on test set
+    y_test_predictions = pd.DataFrame(clf.predict(test_features_np))
+
+    # #  Save predictions to file
+    y_test_predictions.to_csv('data/predictions.csv', index=False, header=False)
