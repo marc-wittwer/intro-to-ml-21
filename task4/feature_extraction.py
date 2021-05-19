@@ -39,17 +39,31 @@ class_name = image_dataset.classes
 
 extraction_net = models.resnet101(pretrained=True)
 
+# To display the image
+def imshow(inp, title=None):
+    """Imshow for Tensor."""
+    inp = inp.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    inp = std * inp + mean
+    inp = np.clip(inp, 0, 1)
+    plt.imshow(inp)
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)  # pause a bit so that plots are updated
 
 def processImage(tuple):
     i, data = tuple
-    print(i)
+    print(i, image_dataset.samples[i][0])
     out = extraction_net(data[0])
     features_dict[i] = out.data.numpy()[0]
+    # imshow(data[0][0])
+    # time.sleep(10)
 
 
 features_dict = multiprocessing.Manager().dict()
 
-with multiprocessing.Pool(multiprocessing.cpu_count() - 1) as P:
+with multiprocessing.Pool() as P:
     P.map(processImage, enumerate(dataloader), chunksize=1)
     P.close()
     P.join()
@@ -59,22 +73,9 @@ for i in range(len(features_dict)):
     final_features.append(features_dict[i])
 
 df = pd.DataFrame(final_features)
-df.to_csv('data/train_image_features.csv', index=True, header=False)
+df.to_csv('data/train_image_features_XXXXX.csv', index=True, header=False)
 
 
-# To display the image
-# def imshow(inp, title=None):
-#     """Imshow for Tensor."""
-#     inp = inp.numpy().transpose((1, 2, 0))
-#     mean = np.array([0.485, 0.456, 0.406])
-#     std = np.array([0.229, 0.224, 0.225])
-#     inp = std * inp + mean
-#     inp = np.clip(inp, 0, 1)
-#     plt.imshow(inp)
-#     if title is not None:
-#         plt.title(title)
-#     plt.pause(0.001)  # pause a bit so that plots are updated
-#
 #
 # # Get a batch of training data
 # image, classes = next(iter(dataloader))
