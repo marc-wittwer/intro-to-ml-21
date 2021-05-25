@@ -33,7 +33,7 @@ class FoodTripletsData:
             self.triplets, self.labels = self._balance_triplets(self.triplets)
 
         if shuffle:
-            self._shuffle_dataset()
+            self.shuffle()
 
         self.batch_size = batch_size
         self.n_batches = int(math.ceil(self.triplets.shape[0] / self.batch_size))
@@ -74,7 +74,7 @@ class FoodTripletsData:
     def __len__(self):
         return self.triplets.shape[0]
 
-    def _shuffle_dataset(self):
+    def shuffle(self):
         """
         Randomly permute triplets and labels accordingly
         """
@@ -149,7 +149,7 @@ def train_sgd_incremental(dataset, n_epochs=1, split=0.8, tol=0):
             accuracy = compute_accuracy(y_pred, y_test)
             avg_acc += accuracy * (len(y_train) + len(y_pred))  #  track accuracy over epoch, account for varying batch sizes
             print(f"Epoch {epoch+1}/{n_epochs}, Batch {i+1}/{dataset.n_batches}, "
-                  f"Test Accuracy: {accuracy}, Time: {timer(ts, time.time())}")
+                  f"Test Accuracy: {accuracy:.3f}, Time: {timer(ts, time.time())}")
 
         # compute average accuracy of this epoch, terminate if no improvement happens
         avg_acc = avg_acc / len(dataset)
@@ -157,6 +157,7 @@ def train_sgd_incremental(dataset, n_epochs=1, split=0.8, tol=0):
         if ((avg_acc - prev_avg_acc) < tol) and (avg_acc > 0.8):
             print(f"Terminating training early. Avg Acc: {avg_acc}, Epoch: {epoch+1}")
             break
+        dataset.shuffle()
     return sgd
 
 
