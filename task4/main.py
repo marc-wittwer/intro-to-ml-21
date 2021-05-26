@@ -9,6 +9,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.kernel_approximation import RBFSampler
 import math
+import collections
 
 
 def fifty_fifty():
@@ -45,6 +46,8 @@ class FoodTripletsData:
         # create sampler to approximate rbf kernel feature transform (for nonlinear classification)
         if self.n_rbf > 0:
             self.rbf_sampler = RBFSampler(gamma=1, n_components=self.n_rbf)
+
+        print(f"Done. Dataset contains {self.triplets.shape[0]} triplets.")
 
     def _balance_triplets(self, triplets):
         """
@@ -300,13 +303,14 @@ def train_classifier(train_features, train_labels):
     return best_clf
 
 
-if __name__ == "__main__":
+def main_sgd():
     n_jobs = 3
     train_test_split = 0.8  # fraction of train set
     batch_size = 5000  # samples per partial fit
     n_epochs = 10  # passes over the complete dataset
-    n_components_rbf = 15000  # number of samples to approximate rbf kernel
-                              # (higher means more accurate but more computation)
+    n_components_rbf = 0  # number of samples to approximate rbf kernel.
+    # higher means more accurate but more computation.
+    # n_components >> n_features for a useful approx.
 
     np.random.seed(42)
     print("start: " + str(time.ctime()))
@@ -324,7 +328,7 @@ if __name__ == "__main__":
     # train classifier
     train_dataset = FoodTripletsData(image_features, train_triplets_path,
                                      batch_size=batch_size, shuffle=True,
-                                     train=True, extend=True,
+                                     train=True, extend=False,
                                      n_rbf=n_components_rbf)
     print("training classifier...")
     clf = train_sgd_incremental(train_dataset, n_epochs=n_epochs, split=train_test_split,
@@ -341,3 +345,40 @@ if __name__ == "__main__":
     predictions_df = pd.DataFrame(y_test_predictions).astype(int)
     predictions_df.to_csv('data/predictions.csv', index=False, header=False)
     print(f"Fitting and prediction took {timer(t, time.time())}")
+
+
+def get_feature_counts():
+    ing_feature_counts_path = "data/ing_feature_counts.csv"
+    ing_features_path = "data/ing_features.csv"
+    ing_vocab_path = "data/ing_vocab.csv"
+    if os.path.isfile(ing_feature_counts_path):
+        print("Loading existing feature counts...")
+        ing_feature_counts = pd.read_csv(ing_feature_counts_path, index_col=0, header=0)
+
+    else:
+        print("No feature counts found. Computing them now...")
+        ing_features = pd.read_csv(ing_features_path, index_col=0, header=None)
+        ing_vocabulary = pd.read_csv(ing_vocab_path, header=None)
+
+        ing_feature_counts = ing_features.apply(collections.Counter, axis=1)
+        ing_feature_counts = pd.DataFrame.from_records(ing_feature_counts).fillna(value=0)
+        ing_feature_counts = ing_feature_counts.reindex(sorted(ing_feature_counts.columns), axis=1)  # sort columns
+        for i in range(len(ing_feature_counts.columns)):
+            col = ing_feature_counts.columns[i]
+            new_name = ing_vocabulary.loc[col, 0]
+            ing_feature_counts.rename(columns={col: new_name}, inplace=True)
+        ing_feature_counts.to_csv(ing_feature_counts_path, index=True, header=True)
+
+    print(ing_feature_counts)
+    return ing_feature_counts
+
+
+def main_ing():
+    pass
+
+
+if __name__ == "__main__":
+    #main_sgd()
+
+    #main_ing()
+    get_feature_counts()
