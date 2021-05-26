@@ -19,25 +19,32 @@ def fifty_fifty():
 
 
 class FoodTripletsData:
-    def __init__(self, img_features, trp_path, batch_size, shuffle=False, train=False, extend=True):
+    def __init__(self, img_features, trp_path, batch_size, shuffle=False, train=False, extend=True, n_rbf=0):
         print(f"Initializing dataset: {trp_path}")
         self.train = train  # if True: balance dataset + create labels
         self.extend = extend  # if True: extend triplets with inverted labels
+        self.n_rbf = n_rbf  # number of components to approximate rbf kernel (0 = don't use rbf kernel)
 
         # load features
         self.img_features = img_features
         self.triplets = pd.read_csv(trp_path, sep=" ", header=None).to_numpy()
         self.labels = None
 
+        # balance (and possibly extend) training set
         if train:
             self.triplets, self.labels = self._balance_triplets(self.triplets)
 
+        # shuffle triplets & labels accordingly
         if shuffle:
             self.shuffle()
 
         self.batch_size = batch_size
         self.n_batches = int(math.ceil(self.triplets.shape[0] / self.batch_size))
         self.n_features = self.img_features.shape[1]
+
+        # create sampler to approximate rbf kernel feature transform (for nonlinear classification)
+        if self.n_rbf > 0:
+            self.rbf_sampler = RBFSampler(gamma=1, n_components=self.n_rbf)
 
     def _balance_triplets(self, triplets):
         """
@@ -84,7 +91,10 @@ class FoodTripletsData:
         self.labels = self.labels[p_indices]
 
     def __getitem__(self, idx):
-        return self._get_item(idx)
+        x, y = self._get_item(idx)
+        if self.n_rbf > 0:
+            x = self.rbf_sampler.fit_transform(x)
+        return x, y
 
     def _get_item(self, idx):
         triplet = self.triplets[idx]
@@ -96,7 +106,7 @@ class FoodTripletsData:
         label = 0
         if self.train:
             label = np.array([self.labels[idx]])
-        return {"x": features, "y": label}
+        return features, label
 
     def get_batch(self, i):
         # get indices of items to collect in i-th batch
@@ -110,10 +120,14 @@ class FoodTripletsData:
 
         k = 0
         for idx in indices:
-            item = self._get_item(idx)
-            x_batch[k] = item["x"]
-            y_batch[k] = item["y"]
+            x, y = self._get_item(idx)
+            x_batch[k] = x
+            y_batch[k] = y
             k += 1
+
+        # fit rbf kernel if desired
+        if self.n_rbf > 0:
+            x_batch = self.rbf_sampler.fit_transform(x_batch)
 
         return x_batch, y_batch
 
@@ -137,6 +151,7 @@ def compute_accuracy(predictions, ground_truth):
 
 def train_sgd_incremental(dataset, n_epochs=1, split=0.8, tol=0):
     sgd = SGDClassifier()
+
     prev_avg_acc = 0
     for epoch in range(n_epochs):
         avg_acc = 0
@@ -153,10 +168,12 @@ def train_sgd_incremental(dataset, n_epochs=1, split=0.8, tol=0):
 
         # compute average accuracy of this epoch, terminate if no improvement happens
         avg_acc = avg_acc / len(dataset)
-        print(f"    Epoch {epoch+1} complete. Average accuracy: {avg_acc}, Time: {timer(te, time.time())}")
-        if ((avg_acc - prev_avg_acc) < tol) and (avg_acc > 0.8):
+        acc_diff = avg_acc - prev_avg_acc
+        print(f"   Epoch {epoch+1} complete. Average accuracy: {avg_acc} (+{acc_diff}), Time: {timer(te, time.time())}")
+        if (acc_diff < tol) and (avg_acc > 0.8):
             print(f"Terminating training early. Avg Acc: {avg_acc}, Epoch: {epoch+1}")
             break
+        prev_avg_acc = avg_acc
         dataset.shuffle()
     return sgd
 
@@ -286,8 +303,10 @@ def train_classifier(train_features, train_labels):
 if __name__ == "__main__":
     n_jobs = 3
     train_test_split = 0.8  # fraction of train set
-    batch_size = 5000
-    n_epochs = 10
+    batch_size = 5000  # samples per partial fit
+    n_epochs = 10  # passes over the complete dataset
+    n_components_rbf = 15000  # number of samples to approximate rbf kernel
+                              # (higher means more accurate but more computation)
 
     np.random.seed(42)
     print("start: " + str(time.ctime()))
@@ -304,15 +323,17 @@ if __name__ == "__main__":
 
     # train classifier
     train_dataset = FoodTripletsData(image_features, train_triplets_path,
-                                     batch_size=batch_size,
-                                     shuffle=True, train=True, extend=True)
+                                     batch_size=batch_size, shuffle=True,
+                                     train=True, extend=True,
+                                     n_rbf=n_components_rbf)
     print("training classifier...")
-    clf = train_sgd_incremental(train_dataset, n_epochs=n_epochs, split=train_test_split)
+    clf = train_sgd_incremental(train_dataset, n_epochs=n_epochs, split=train_test_split,
+                                tol=0)
 
     # predict on test set
     test_dataset = FoodTripletsData(image_features, test_triplets_path,
-                                    batch_size=batch_size,
-                                    shuffle=False, train=False)
+                                    batch_size=batch_size, shuffle=False,
+                                    train=False, n_rbf=n_components_rbf)
     print("predicting on test set...")
     y_test_predictions = predict(clf, test_dataset)
 
