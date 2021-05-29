@@ -13,10 +13,7 @@ import collections
 
 
 def fifty_fifty():
-    if np.random.random() < 0.5:
-        return True
-    else:
-        return False
+    return np.random.random() < 0.5
 
 
 class FoodTripletsData:
@@ -39,8 +36,13 @@ class FoodTripletsData:
         if shuffle:
             self.shuffle()
 
-        self.batch_size = batch_size
-        self.n_batches = int(math.ceil(self.triplets.shape[0] / self.batch_size))
+        if batch_size < 1:
+            self.batch_size = self.triplets.shape[0]
+            self.n_batches = 1
+        else:
+            self.batch_size = batch_size
+            self.n_batches = int(math.ceil(self.triplets.shape[0] / self.batch_size))
+
         self.n_features = self.img_features.shape[1]
 
         # create sampler to approximate rbf kernel feature transform (for nonlinear classification)
@@ -183,11 +185,11 @@ def train_sgd_incremental(dataset, n_epochs=1, split=0.8, tol=0):
 
 def predict(classifier, dataset):
     bs = dataset.batch_size
-    predictions = np.zeros(len(test_dataset))
+    predictions = np.zeros(len(dataset))
     for i in range(dataset.n_batches):
         x, _ = dataset.get_batch(i)
         pred = classifier.predict(x)
-        predictions[(i * batch_size):(i * batch_size + len(pred))] = pred
+        predictions[(i * bs):(i * bs + len(pred))] = pred
     return predictions
 
 
@@ -197,7 +199,7 @@ def timer(start, end):
     return "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
 
 
-# old function, currently unused (stack all feature triplets)
+# stack all feature triplets
 def build_features_and_labels(img_features, train_trp, test_trp):
     n_train = len(train_trp)  # number of train triplets
     n_test = len(test_trp)  # number of test triplets
@@ -252,15 +254,25 @@ def build_features_and_labels(img_features, train_trp, test_trp):
     return train_x, train_y, test_x
 
 
-# old function, currently unused (train clf using grid search on complete train set)
-def train_classifier(train_features, train_labels):
+# train clf using grid search on complete train set
+def train_classifier(train_features, train_labels, n_jobs=1, cv=5):
+
+    cat_features = np.ones(train_features.shape[1], dtype=bool)
+    if len(cat_features) == 223*3:
+        # padding is no categorical feature (if even included)
+        for i in range(3):
+            print("features include padding count.")
+            cat_features[223*(i+1)-1] = False
+            print(223*(i+1)-1)
+
     grid_search_params = [
-        {'clf': HistGradientBoostingClassifier(max_iter=100, random_state=42),
-         'params': {'clf__l2_regularization': [0],
+        {'clf': HistGradientBoostingClassifier(random_state=42),
+         'params': {'clf__l2_regularization': [3],
                     'clf__max_leaf_nodes': [31],
-                    'clf__min_samples_leaf': [20],
-                    'clf__learning_rate': [0.1]
-                    }
+                    'clf__min_samples_leaf': [30],
+                    'clf__learning_rate': [0.05],
+                    'clf__categorical_features': [cat_features],
+                    'clf__max_iter': [500, 700, 1000]}
          }
     ]
 
@@ -271,7 +283,7 @@ def train_classifier(train_features, train_labels):
         pipeline = Pipeline(steps=[('clf', params['clf'])])
 
         grid_search = GridSearchCV(pipeline, param_grid=params['params'], scoring='accuracy', n_jobs=n_jobs, verbose=3,
-                                   cv=2)
+                                   cv=cv)
 
         grid_search.fit(train_features, train_labels)
 
@@ -304,7 +316,6 @@ def train_classifier(train_features, train_labels):
 
 
 def main_sgd():
-    n_jobs = 3
     train_test_split = 0.8  # fraction of train set
     batch_size = 5000  # samples per partial fit
     n_epochs = 10  # passes over the complete dataset
@@ -324,6 +335,7 @@ def main_sgd():
     # load image features (avoid loading twice, it's a big file, datasets can share it)
     print("Loading image features...")
     image_features = pd.read_csv(image_features_path, header=None, index_col=0)
+    image_features.drop("<pad>", axis=1)  # don't count padding as feature
 
     # train classifier
     train_dataset = FoodTripletsData(image_features, train_triplets_path,
@@ -374,11 +386,36 @@ def get_feature_counts():
 
 
 def main_ing():
-    pass
+    n_jobs = 3
+    cv = 2
+    np.random.seed(42)
+
+    # load triplets
+    train_triplets_path = "data/train_triplets.txt"
+    test_triplets_path = "data/test_triplets.txt"
+
+    # load image features (ingredient counts)
+    features = get_feature_counts()
+
+    # build train set
+    train_set = FoodTripletsData(features, train_triplets_path, -1, shuffle=True,
+                                 train=True, extend=False, n_rbf=0)
+    train_x, train_y = train_set.get_batch(0)
+
+    # train classifier (gradient boosted trees)
+    clf = train_classifier(train_x, train_y, n_jobs=n_jobs, cv=cv)
+
+    # build test set
+    test_set = FoodTripletsData(features, test_triplets_path, -1, shuffle=False,
+                                train=False, extend=False, n_rbf=0)
+    test_x, _ = test_set.get_batch(0)
+
+    # predict on test set
+    predictions = clf.predict(test_x)
+    predictions_df = pd.DataFrame(predictions).astype(int)
+    predictions_df.to_csv('data/predictions.csv', index=False, header=False)
 
 
 if __name__ == "__main__":
-    #main_sgd()
-
-    #main_ing()
-    get_feature_counts()
+    # main_sgd()
+    main_ing()
